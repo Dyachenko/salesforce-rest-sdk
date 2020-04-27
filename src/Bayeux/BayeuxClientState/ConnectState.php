@@ -22,7 +22,7 @@ class ConnectState extends ClientState
 
                     if (!$message->isSuccessful()) {
                         $this->logger->critical(
-                            'Failed to connect with Salesforce: {error}',
+                            sprintf('Failed to connect with Salesforce: %s', $message->getError()),
                             [
                                 'error' => $message->getError(),
                             ]
