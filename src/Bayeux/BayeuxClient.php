@@ -24,40 +24,40 @@ class BayeuxClient
     /**
      * State assumed after the handshake when the connection is broken
      */
-    public const UNCONNECTED = "UNCONNECTED";
+    public const UNCONNECTED = 'UNCONNECTED';
     /**
      * State assumed when the handshake is being sent
      */
-    public const HANDSHAKING = "HANDSHAKING";
+    public const HANDSHAKING = 'HANDSHAKING';
     /**
      * State assumed when a first handshake failed and the handshake is retried,
      * or when the Bayeux server requests a re-handshake
      */
-    public const REHANDSHAKING = "REHANDSHAKING";
+    public const REHANDSHAKING = 'REHANDSHAKING';
     /**
      * State assumed when the handshake is received, but before connecting
      */
-    public const HANDSHAKEN = "HANDSHAKEN";
+    public const HANDSHAKEN = 'HANDSHAKEN';
     /**
      * State assumed when the connect is being sent for the first time
      */
-    public const CONNECTING = "CONNECTING";
+    public const CONNECTING = 'CONNECTING';
     /**
      * State assumed when this {@link BayeuxClient} is connected to the Bayeux server
      */
-    public const CONNECTED = "CONNECTED";
+    public const CONNECTED = 'CONNECTED';
     /**
      * State assumed when the disconnect is being sent
      */
-    public const DISCONNECTING = "DISCONNECTING";
+    public const DISCONNECTING = 'DISCONNECTING';
     /**
      * State assumed when the disconnect is received but terminal actions must be performed
      */
-    public const TERMINATING = "TERMINATING";
+    public const TERMINATING = 'TERMINATING';
     /**
      * State assumed before the handshake and when the disconnect is completed
      */
-    public const DISCONNECTED = "DISCONNECTED";
+    public const DISCONNECTED = 'DISCONNECTED';
 
     public const VERSION            = '1.0';
     public const MINIMUM_VERSION    = '1.0';
@@ -126,7 +126,7 @@ class BayeuxClient
         AbstractClientTransport $transport,
         AuthProviderInterface $authProvider,
         LoggerInterface $logger = null,
-        string $version = "44.0"
+        string $version = '44.0'
     ) {
         $this->transport    = $transport;
         $this->authProvider = $authProvider;
@@ -140,7 +140,7 @@ class BayeuxClient
         }
     }
 
-    protected function createClient(string $version = "44.0")
+    protected function createClient(string $version = '44.0'): Client
     {
         $url = $this->authProvider->getInstanceUrl();
 
@@ -182,7 +182,7 @@ class BayeuxClient
                 function (ChannelInterface $c, Message $message) {
                     if (!$message->isSuccessful()) {
                         $this->logger->error(
-                            "Failed to subscribe to channel {channel}",
+                            'Failed to subscribe to channel {channel}',
                             [
                                 'channel' => $c->getChannelId(),
                             ]
@@ -238,7 +238,7 @@ class BayeuxClient
     public function start(): void
     {
         if (!$this->isDisconnected()) {
-            throw new \RuntimeException("The client must be disconnected before starting.");
+            throw new \RuntimeException('The client must be disconnected before starting.');
         }
 
         $this->getChannel(ChannelInterface::META_HANDSHAKE)->subscribe(
@@ -250,8 +250,8 @@ class BayeuxClient
                     if ($message->isSuccessful()) {
                         $this->listen();
                     } else {
-                        $this->logger->critical("Handshake authentication failed with the server.");
-                        throw new \RuntimeException("Handshake authentication failed with the server.");
+                        $this->logger->critical('Handshake authentication failed with the server.');
+                        throw new \RuntimeException('Handshake authentication failed with the server.');
                     }
                 },
                 1000000
@@ -282,8 +282,8 @@ class BayeuxClient
                 static::TERMINATING,
             ]
         )) {
-            $this->logger->critical("The client must be fully disconnected before handshaking.");
-            throw new \RuntimeException("The client must be fully disconnected before handshaking.");
+            $this->logger->critical('The client must be fully disconnected before handshaking.');
+            throw new \RuntimeException('The client must be fully disconnected before handshaking.');
         }
 
         if ($this->state !== static::REHANDSHAKING) {
@@ -298,21 +298,21 @@ class BayeuxClient
                     $this->state = static::HANDSHAKEN;
 
                     return true;
-                } else {
-                    $advice         = $message->getAdvice();
-                    $this->clientId = null;
-
-                    if (null !== $advice && $advice->getReconnect() === 'retry') {
-                        $this->state = static::REHANDSHAKING;
-                        sleep($advice->getInterval() ?: 0);
-
-                        $this->handshake();
-                    } else {
-                        $this->state = static::UNCONNECTED;
-                    }
-
-                    return false;
                 }
+
+                $advice         = $message->getAdvice();
+                $this->clientId = null;
+
+                if (null !== $advice && $advice->getReconnect() === 'retry') {
+                    $this->state = static::REHANDSHAKING;
+                    sleep($advice->getInterval() ?: 0);
+
+                    $this->handshake();
+                } else {
+                    $this->state = static::UNCONNECTED;
+                }
+
+                return false;
             },
             -1000
         );
@@ -330,8 +330,8 @@ class BayeuxClient
     public function connect(): void
     {
         if ($this->state !== static::HANDSHAKEN && $this->state !== static::CONNECTED) {
-            $this->logger->critical("Cannot connect to the server without first handshaking with it.");
-            throw new \RuntimeException("Cannot connect to the server without first handshaking with it.");
+            $this->logger->critical('Cannot connect to the server without first handshaking with it.');
+            throw new \RuntimeException('Cannot connect to the server without first handshaking with it.');
         }
 
         $this->state = static::CONNECTING;
@@ -348,7 +348,7 @@ class BayeuxClient
                     $this->state = static::CONNECTED;
                 } else {
                     $this->logger->critical(
-                        'Failed to connect with Salesforce: {error}',
+                        sprintf('Failed to connect with Salesforce: %s', $message->getError()),
                         [
                             'error' => $message->getError(),
                         ]
@@ -382,9 +382,9 @@ class BayeuxClient
     public function listen(): void
     {
         if ($this->state !== static::HANDSHAKEN) {
-            $this->logger->critical("A handshake connection with the streaming service must occur before listening.");
+            $this->logger->critical('A handshake connection with the streaming service must occur before listening.');
             throw new \RuntimeException(
-                "A handshake connection with the streaming service must occur before listening."
+                'A handshake connection with the streaming service must occur before listening.'
             );
         }
 
@@ -411,8 +411,8 @@ class BayeuxClient
     public function disconnect(): void
     {
         if (!in_array($this->state, [static::CONNECTING, static::CONNECTED, static::TERMINATING])) {
-            $this->logger->notice("The server must be connected before disconnecting.");
-            throw new \RuntimeException("The server must be connected before disconnecting.");
+            $this->logger->notice('The server must be connected before disconnecting.');
+            throw new \RuntimeException('The server must be connected before disconnecting.');
         }
 
         if ($this->state !== static::TERMINATING) {
@@ -479,7 +479,7 @@ class BayeuxClient
         $this->processQueue();
     }
 
-    public function prepareExtensions(array $messages)
+    public function prepareExtensions(array $messages): void
     {
         foreach ($this->extensions as $extension) {
             foreach ($messages as $message) {
@@ -520,10 +520,10 @@ class BayeuxClient
             );
         } catch (SessionExpiredOrInvalidException $e) {
             array_unshift($this->requestQueue, $messages);
-            $this->logger->notice("ERROR OCCURRED: ".$e->getMessage());
-            $this->logger->info("Attempting to reauthenticate");
+            $this->logger->notice('ERROR OCCURRED: ' . $e->getMessage());
+            $this->logger->info('Attempting to reauthenticate');
             $this->authProvider->reauthorize();
-            $this->logger->info("Reauthentication successful");
+            $this->logger->info('Reauthentication successful');
             $this->processQueue();
 
             return;
